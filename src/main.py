@@ -53,7 +53,14 @@ def get_todos_handler(order: str| None = None):
     return result
 
 
+# 단일 todo를 조회하는 api
+@app.get("/todos/{todo_id}") # 중괄호로 묶어주면 path로 사용가능
+def get_todo_handler(todo_id: int):
+    return todo_data.get(todo_id, {}) # 없으면 빈딕셔너리 리턴
+
 
 
 # 서버 실행 방법
-# uvicorn main:app
+# uvicorn main:app --reload
+
+# reload: 코드 변경이 감지되면 자동으로 서버 재기동
