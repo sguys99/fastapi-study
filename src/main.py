@@ -87,6 +87,14 @@ def update_todo_handler(
         return todo # 업데이트 결과를 보여줌
     return {} # 없으면 빈 딕셔너리 리턴
 
+
+# delete
+@app.delete("/todos/{todo_id}")
+def delete_todo_handler(todo_id: int):
+    todo_data.pop(todo_id, None) # pop으로 삭제 처리, 데이터가 없을 때 에러 방지를 위해 None 처리
+    return todo_data # .values와 차이를 보기 바람
+    
+
 # 서버 실행 방법
 # uvicorn main:app --reload
 
