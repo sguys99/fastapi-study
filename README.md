@@ -18,3 +18,22 @@
 - 최종 완성본 프로젝트는 아래의 주소에 공개되어 있습니다.
 
     - https://github.com/qu3vipon/inflearn-todos
+
+
+
+### Status Code
+**2xx**
+- 200 OK 요청 성공, 범용적, GET/POST/PUT/PATCH
+- 201 Created 요청 성공, 새로운 자원 생성, POST
+- 204 No Content 요청 성공, 응답할 자원 없음, DELETE
+
+**4xx**
+- 400 Bad Request 요청 실패, 요청이 잘못된 경우(query param, body)
+- 401 Unauthorized 인증 실패
+- 403 Forbidden 권한 문제 또는 잘못된 method
+- 404 Not Found 자원이 없는 경우 또는 잘못된 endpoint
+
+**5xx**
+- 500 Internal Server Error 범용적인 서버 에러
+- 502 Bad Gateway Reverse Proxy에서 서버의 응답을 처리할 수 없는 경우
+- 503 Service Unavailable 서버가 요청을 처리할 수 없는 경우(e.g. 일시적 부하, 서버 다운)
