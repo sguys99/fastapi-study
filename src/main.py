@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from pydantic import BaseModel
 
 app = FastAPI()
 
@@ -59,6 +60,18 @@ def get_todo_handler(todo_id: int):
     return todo_data.get(todo_id, {}) # 없으면 빈딕셔너리 리턴
 
 
+# post 메서드를 사용하여 매핑
+# pydantic을 사용하여 request body 생성 가능
+class CreateToDoRequest(BaseModel):
+    id: int
+    contents: str
+    is_done: bool
+
+
+@app.post("/todos")
+def create_todo_handler(request: CreateToDoRequest):
+    todo_data[request.id] = request.model_dump() # model_dump 메서드를 사용하면 딕셔너리 포멧으로 변경됨
+    return todo_data[request.id]
 
 # 서버 실행 방법
 # uvicorn main:app --reload
