@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Body
 from pydantic import BaseModel
 
 app = FastAPI()
@@ -72,6 +72,20 @@ class CreateToDoRequest(BaseModel):
 def create_todo_handler(request: CreateToDoRequest):
     todo_data[request.id] = request.model_dump() # model_dump 메서드를 사용하면 딕셔너리 포멧으로 변경됨
     return todo_data[request.id]
+
+# patch로 기존 todo update하기: 사용자로부터 완료처리(is_done) 입력 받기
+# 앞의 post와 다른점: Request body 전체를 받는 것이 아니라 id와 is_done만 받는다.
+@app.patch("/todos/{todo_id}")
+def update_todo_handler(
+    todo_id: int,
+    is_done: bool = Body(..., embed=True) # 하나의 컬럼이지만 바디처럼 묶어서 사용할 수 있음??
+    ):
+    
+    todo = todo_data.get(todo_id)
+    if todo:
+        todo["is_done"] = is_done
+        return todo # 업데이트 결과를 보여줌
+    return {} # 없으면 빈 딕셔너리 리턴
 
 # 서버 실행 방법
 # uvicorn main:app --reload
