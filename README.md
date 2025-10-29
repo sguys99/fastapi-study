@@ -103,3 +103,21 @@ from sqlalchemy import select
 session.scalar(select(1))
 # docker db가 돌아가고 있으면 메시지가 출력됨됨
 ```
+
+### database/orm.py 생성후 터미널에서 테스트
+```python
+
+from database.connection import SessionFactory
+
+session = SessionFactory()
+
+from sqlalchemy import select
+
+from database.orm import ToDo
+
+
+session.scalars(select(ToDo)) # ToDO에 있는 모든 레코드를 출력함
+
+list(session.scalars(select(ToDo))) # 보기 좋게
+
+```
