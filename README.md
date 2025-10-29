@@ -37,3 +37,55 @@
 - 500 Internal Server Error 범용적인 서버 에러
 - 502 Bad Gateway Reverse Proxy에서 서버의 응답을 처리할 수 없는 경우
 - 503 Service Unavailable 서버가 요청을 처리할 수 없는 경우(e.g. 일시적 부하, 서버 다운)
+
+
+## 데이터 베이스
+**분류**
+- 관계형 데이터베이스(Relational database, RDB)
+    - 관계형 모델에 기반해서 데이터를 테이블, 행, 열 구조로 관리(=Schemaful)
+    - Oracle, MySQL, PostgreSQL, Sqlite, …
+- 비관계형 데이터베이스(NoSQL)
+    - Key-value : Redis, etcd
+    - Document : MongoDB
+    - Wide-column : Cassandra, ScyllaDB
+    - Timeseries : Apache Druid,
+
+### Sqlalchemy
+**Sqlalchemy**
+- 관계형 데이터베이스를 사용하기 위한 High-level 인터페이스를 제공하는 Python 라이브러리
+    - ORM, Query, Transaction, Connection Pooling
+
+**ORM(Object-Relational Mapping)**
+- 관계형 데이터베이스를 객체 지향 프로그래밍(OOP)에 대응하여 사용하는 프로그래밍 기술
+    - 하나의 테이블 = 하나의 클래스
+    - 하나의 행(레코드) = 하나의 객체
+
+### 데이터 베이스 실습을 위한 주요 명령어
+**Docker 명령어**
+```bash
+docker run -p 3306:3306 -e MYSQL_ROOT_PASSWORD=todos -e MYSQL_DATABASE=todos -d -v todos:/db --name todos mysql:8.0
+docker ps
+docker logs todos
+docker volume ls
+```
+ 
+
+**MySQL 접속**
+```bash
+docker exec -it todos bash 
+mysql -u root -p
+``` 
+
+**SQL**
+```bash
+SHOW databases;
+USE todos;
+CREATE TABLE todo(
+    id INT NOT NULL AUTO_INCREMENT,
+    contents VARCHAR(256) NOT NULL,
+    is_done BOOLEAN NOT NULL,
+    PRIMARY KEY (id)
+);
+INSERT INTO todo (contents, is_done) VALUES ("FastAPI Section 0", true);
+SELECT * FROM todo;
+```
