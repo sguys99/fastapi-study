@@ -89,3 +89,17 @@ CREATE TABLE todo(
 INSERT INTO todo (contents, is_done) VALUES ("FastAPI Section 0", true);
 SELECT * FROM todo;
 ```
+
+
+### database/connection.py 생성후 파이썬 터미널에서 테스트
+```python
+
+from database.connection import SessionFactory
+
+session = SessionFactory()
+
+from sqlalchemy import select
+
+session.scalar(select(1))
+# docker db가 돌아가고 있으면 메시지가 출력됨됨
+```
