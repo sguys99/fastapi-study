@@ -17,4 +17,5 @@ Pytest: 테스트 코드 작성을 위한 라이브러리
 ## 40. pytest 세팅
 ```bash
 uv add pytest
+uv add httpx
 ```
