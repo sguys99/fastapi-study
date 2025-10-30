@@ -121,3 +121,42 @@ session.scalars(select(ToDo)) # ToDO에 있는 모든 레코드를 출력함
 list(session.scalars(select(ToDo))) # 보기 좋게
 
 ```
+
+## 30. ORM 적용한 API 변경하기
+
+우선 connection.py에 get_db()라는 제네레이터를 정의하자.
+```python
+
+def get_db():
+    session = SessionFactory()
+    try:
+        yield session
+    finally:
+        session.close()
+
+```
+
+그리고 repository.py를 만들어 데이터를 조회하는 함수들을 여기에 정의하자.
+```python
+# ToDo를 리스트에 담아서 리턴
+def get_todos(session: Session) -> List[ToDo]:
+    return list(session.scalars(select(ToDo)))
+```
+
+이제 main.py로 이동해서 get_todos_handler를 수정하자.
+```python
+@app.get("/todos", status_code=200)
+def get_todos_handler(
+    order: str| None = None,
+    session: Session = Depends(get_db)
+    ):
+    # result = list(todo_data.values())
+    
+    todos: List[ToDo] = get_todos(session=session)
+    if order and order == "DESC": # DB에서 역정렬 해야지면, 일단 이렇게
+        return todos[::-1]
+        
+    return todos
+```
+
+그리고 swagger에서 테스트 해볼것 

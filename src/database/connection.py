@@ -12,3 +12,12 @@ SessionFactory = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # commit, flush를 명시적으로 진행하겠다는 의미
 
 # README.md의 테스트 코드 실행할 것
+
+
+# ch 30
+def get_db():
+    session = SessionFactory()
+    try:
+        yield session
+    finally:
+        session.close()
