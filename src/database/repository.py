@@ -14,3 +14,10 @@ def get_todos(session: Session) -> List[ToDo]:
 # 개별 조회, 조회 항목이 없으면 None을 리턴
 def get_todo_by_todo_id(session: Session, todo_id: int) -> ToDo | None:
     return session.scalar(select(ToDo).where(ToDo.id == todo_id))
+
+
+def create_todo(session: Session, todo: ToDo) -> ToDo:
+    session.add(instance=todo)
+    session.commit() # db에저장
+    session.refresh(instance=todo) # 데이터를 다시 읽어주는 부분(db read), 이때 todo_id 값이 반영되서 저장됨
+    return todo # id가 포함된 todo를 리턴

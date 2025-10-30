@@ -249,3 +249,79 @@ class CreateToDoRequest(BaseModel):
 class ToDoListSchema(BaseModel):
     todos: List[ToDoSchema]
 ```
+
+## 34. Post에 ORM 적용하기
+POST에 적용할 때는 pydantic 객체를 ORM 객체로 변환해서 적용해야한다.
+
+그러기 위해서, orm.py에 class ToDo에 classmethod를 정의해서 orm 객체로 변환하는 기능을 구현한다.
+```python
+# orm.py
+
+class ToDo(Base): # mysql에서 생성한 동일한 테이블 구조
+    __tablename__ = "todo"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    contents = Column(String(256), nullable=False)
+    is_done = Column(Boolean, nullable=False)
+    
+    def __repr__(self): # 내부 정보 출력, 확인위해
+        return f"ToDo(id={self.id}, contents={self.contents}, is_done={self.is_done})"
+    
+    @classmethod
+    def create(cls, request: CreateToDoRequest)-> ToDo:
+        return cls( # id는 DB에서 별도(자동) 지정되도록 했기 때문에, 두개만 지정하면됨
+            contents=request.contents,
+            is_done=request.is_done
+        )
+```
+
+그리고 repository에 DB에 todo를 기록하는 create_todo 함수를 정의하자.
+```python
+
+def create_todo(session: Session, todo: ToDo) -> ToDo:
+    session.add(instance=todo)
+    session.commit() # db에저장
+    session.refresh(instance=todo) # 데이터를 다시 읽어주는 부분(db read), 이때 todo_id 값이 반영되서 저장됨
+    return todo # id가 포함된 todo를 리턴
+
+```
+
+그리고 request.py에서 CreateToDoRequest의 id를 제외하자. DB에서 자동으로 부여하기 때문이다.
+```python
+class CreateToDoRequest(BaseModel):
+    # id: int
+    contents: str
+    is_done: bool
+```
+
+
+이제 main.py로 가서 create_todo_handler를 수정하자.
+```python
+@app.post("/todos", status_code=201)
+def create_todo_handler(
+    request: CreateToDoRequest,
+    session: Session = Depends(get_db)
+    ) -> ToDoSchema:
+    #todo_data[request.id] = request.model_dump()
+    todo: ToDo = ToDo.create(request=request) # id = None
+    todo: ToDo = create_todo(session=session, todo=todo) #id=int
+    # return todo_data[request.id]
+    return ToDoSchema.model_validate(todo)
+```
+
+이제 스웨거에서 post request body를 다음과 같이 추가해보자.
+```bash
+{
+  "contents": "test",
+  "is_done": false
+}
+```
+
+그러면 결과로 자동으로 id 4가 부여된 것을 알 수 있다.
+```bash
+{
+  "id": 4,
+  "contents": "test",
+  "is_done": false
+}
+```

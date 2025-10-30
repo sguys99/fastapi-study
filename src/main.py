@@ -2,7 +2,7 @@ from fastapi import Depends, FastAPI, Body, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from database.connection import get_db
-from database.repository import get_todo_by_todo_id, get_todos
+from database.repository import get_todo_by_todo_id, get_todos, create_todo
 
 
 from database.orm import ToDo
@@ -213,9 +213,17 @@ def get_todo_handler(
 # pydantic을 사용하여 request body 생성 가능
 
 @app.post("/todos", status_code=201)
-def create_todo_handler(request: CreateToDoRequest):
-    todo_data[request.id] = request.model_dump() # model_dump 메서드를 사용하면 딕셔너리 포멧으로 변경됨
-    return todo_data[request.id]
+def create_todo_handler(
+    request: CreateToDoRequest,
+    session: Session = Depends(get_db)
+    ) -> ToDoSchema:
+    #todo_data[request.id] = request.model_dump()
+    todo: ToDo = ToDo.create(request=request) # id = None
+    todo: ToDo = create_todo(session=session, todo=todo) #id=int
+    # return todo_data[request.id]
+    return ToDoSchema.model_validate(todo)
+
+
 
 # patch로 기존 todo update하기: 사용자로부터 완료처리(is_done) 입력 받기
 # 앞의 post와 다른점: Request body 전체를 받는 것이 아니라 id와 is_done만 받는다.
