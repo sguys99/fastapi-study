@@ -11,3 +11,10 @@
 - Unit Test, Integration Test, Regression Test, TDD, BDD 등 다양한 테스트 종류와 방법론 존재
 
 Pytest: 테스트 코드 작성을 위한 라이브러리
+
+
+
+## 40. pytest 세팅
+```bash
+uv add pytest
+```
