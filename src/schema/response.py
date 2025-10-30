@@ -12,5 +12,5 @@ class ToDoSchema(BaseModel): # orm에 생성한 컬럼과 동일일
     
 
 # 이것을 응답에 활용
-class ListToDoResponse(BaseModel):
+class ToDoListSchema(BaseModel):
     todos: List[ToDoSchema]

@@ -229,3 +229,23 @@ def get_todo_handler(
     raise HTTPException(status_code=404, detail="ToDO Not Found")
 ```
 
+## 33. Refactoring
+
+main.py에 있는 CreateToDoRequest를 schema/resquest.py 파일을 만들고 거기로 이동하자.
+```python
+# schema/request.py
+
+from pydantic import BaseModel
+
+
+class CreateToDoRequest(BaseModel):
+    id: int
+    contents: str
+    is_done: bool
+```
+
+그리고 response.py에 있는 ListToDoResponse를 ToDoListSchema로 Rename 하자.
+```python
+class ToDoListSchema(BaseModel):
+    todos: List[ToDoSchema]
+```

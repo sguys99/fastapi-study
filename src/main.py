@@ -8,7 +8,8 @@ from database.repository import get_todo_by_todo_id, get_todos
 from database.orm import ToDo
 from typing import List
 
-from schema.response import ListToDoResponse, ToDoSchema
+from schema.request import CreateToDoRequest
+from schema.response import ToDoListSchema, ToDoSchema
 
 app = FastAPI()
 
@@ -180,16 +181,16 @@ todo_data = {
 def get_todos_handler(
     order: str| None = None,
     session: Session = Depends(get_db)
-    ) -> ListToDoResponse:
+    ) -> ToDoListSchema:
     # result = list(todo_data.values())
     
     todos: List[ToDo] = get_todos(session=session)
     if order and order == "DESC": # DB에서 역정렬 해야지면, 일단 이렇게
-        return ListToDoResponse(
+        return ToDoListSchema(
         todos = [ToDoSchema.model_validate(todo) for todo in todos[::-1]]
     )
 
-    return ListToDoResponse(
+    return ToDoListSchema(
         todos = [ToDoSchema.model_validate(todo) for todo in todos]
     )
 
@@ -208,15 +209,8 @@ def get_todo_handler(
     raise HTTPException(status_code=404, detail="ToDO Not Found")
 
     
-
-
 # post 메서드를 사용하여 매핑
 # pydantic을 사용하여 request body 생성 가능
-class CreateToDoRequest(BaseModel):
-    id: int
-    contents: str
-    is_done: bool
-
 
 @app.post("/todos", status_code=201)
 def create_todo_handler(request: CreateToDoRequest):
