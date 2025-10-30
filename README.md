@@ -160,3 +160,47 @@ def get_todos_handler(
 ```
 
 그리고 swagger에서 테스트 해볼것 
+
+### 31. HTTP Response 처리
+위 함수는 todos를 리턴하면 fastapi가 자동으로 포맷을 json으로 변경해준다.
+
+하지만 실제에서는 response 포맷을 만들어서 활용한다.
+
+schema라는 디렉토리를 만들자. 거기에 response.py 파일 추가.
+여기에 get /todos api가 어떤 형태로 답변해줘야 하는지 정의하자.
+
+```python
+class ToDoSchema(BaseModel): # orm에 생성한 컬럼과 동일일
+    id: int
+    contents: str
+    is_done: bool
+
+    class Config: # 이부분을 추가해주면 pydantic이 ORM 객체를 읽고 알아서 변환해준다.
+        from_attributes = True
+    
+
+# 이것을 응답에 활용
+class ListToDoResponse(BaseModel):
+    todos: List[ToDoSchema]
+```
+
+다시 main.py로 이동하여 def get_todos_handler 수정
+```python
+@app.get("/todos", status_code=200)
+def get_todos_handler(
+    order: str| None = None,
+    session: Session = Depends(get_db)
+    ) -> ListToDoResponse:
+    # result = list(todo_data.values())
+    
+    todos: List[ToDo] = get_todos(session=session)
+    if order and order == "DESC": # DB에서 역정렬 해야지면, 일단 이렇게
+        return ListToDoResponse(
+        todos = [ToDoSchema.model_validate(todo) for todo in todos[::-1]]
+    )
+
+    return ListToDoResponse(
+        todos = [ToDoSchema.model_validate(todo) for todo in todos]
+    )
+
+```

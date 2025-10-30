@@ -8,6 +8,8 @@ from database.repository import get_todos
 from database.orm import ToDo
 from typing import List
 
+from schema.response import ListToDoResponse, ToDoSchema
+
 app = FastAPI()
 
 @app.get("/")
@@ -178,14 +180,18 @@ todo_data = {
 def get_todos_handler(
     order: str| None = None,
     session: Session = Depends(get_db)
-    ):
+    ) -> ListToDoResponse:
     # result = list(todo_data.values())
     
     todos: List[ToDo] = get_todos(session=session)
     if order and order == "DESC": # DB에서 역정렬 해야지면, 일단 이렇게
-        return todos[::-1]
-        
-    return todos
+        return ListToDoResponse(
+        todos = [ToDoSchema.model_validate(todo) for todo in todos[::-1]]
+    )
+
+    return ListToDoResponse(
+        todos = [ToDoSchema.model_validate(todo) for todo in todos]
+    )
 
 
 # 단일 todo를 조회하는 api
