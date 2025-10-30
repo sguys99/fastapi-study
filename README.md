@@ -399,3 +399,29 @@ def update_todo_handler(
   "is_done": true
 }
 ```
+
+## 36. DELETE에 ORM 적용
+먼저 repository.py에 delete_todo 함수 정의
+```python
+def delete_todo(session: Session, todo_id: int) -> None:
+    session.execute(delete(ToDo).where(ToDo.id == todo_id))
+    session.commit()
+```
+
+main.py를 수정한다.
+```python
+@app.delete("/todos/{todo_id}", status_code=204)
+def delete_todo_handler(
+    todo_id: int,
+    session: Session = Depends(get_db)
+    ):
+    todo: ToDo | None = get_todo_by_todo_id(session=session, todo_id=todo_id)
+    if not todo:
+        raise HTTPException(status_code=404, detail="ToDO Not Found")
+    
+    # delete
+    delete_todo(session=session, todo_id=todo_id)
+```
+
+swagger를 실행해서 4번 항목을 삭제해보자.
+아무런 답변은 없고 204응답만 수신됨
