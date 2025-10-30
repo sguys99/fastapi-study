@@ -204,3 +204,28 @@ def get_todos_handler(
     )
 
 ```
+
+## 32. 단일 조회 Get도 수정해보자.
+
+repository.py에 개별 조회 함수 추가
+```python
+# 개별 조회, 조회 항목이 없으면 None을 리턴
+def get_todo_by_todo_id(session: Session, todo_id: int) -> ToDo | None:
+    return session.scalar(select(ToDo).where(ToDo.id == todo_id))
+```
+
+main.py에서 get_todo_handler 수정
+```python
+@app.get("/todos/{todo_id}", status_code=200)
+def get_todo_handler(
+    todo_id: int,
+    session: Session = Depends(get_db)
+    ) -> ToDoSchema:
+    # todo = todo_data.get(todo_id)
+    todo: ToDo | None = get_todo_by_todo_id(session=session, todo_id=todo_id)
+    if todo:
+        # return todo
+        return ToDoSchema.model_validate(todo)
+    raise HTTPException(status_code=404, detail="ToDO Not Found")
+```
+

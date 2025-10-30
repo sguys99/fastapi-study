@@ -2,7 +2,7 @@ from fastapi import Depends, FastAPI, Body, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from database.connection import get_db
-from database.repository import get_todos
+from database.repository import get_todo_by_todo_id, get_todos
 
 
 from database.orm import ToDo
@@ -195,17 +195,18 @@ def get_todos_handler(
 
 
 # 단일 todo를 조회하는 api
-@app.get("/todos/{todo_id}", status_code=200) # 중괄호로 묶어주면 path로 사용가능
-def get_todo_handler(todo_id: int):
-    # 실패시 상태코드 추가를 위해 수정해보자.
-    todo = todo_data.get(todo_id) # 이렇게 하면 없는 경우 default None이 저장됨
+@app.get("/todos/{todo_id}", status_code=200)
+def get_todo_handler(
+    todo_id: int,
+    session: Session = Depends(get_db)
+    ) -> ToDoSchema:
+    # todo = todo_data.get(todo_id)
+    todo: ToDo | None = get_todo_by_todo_id(session=session, todo_id=todo_id)
     if todo:
-        return todo
-    #return todo_data.get(todo_id, {}) # 없으면 빈딕셔너리 리턴
-    raise HTTPException(status_code=404, detail="ToDO Not Found") # 실패 코드 리턴
-# 리턴을 하면 fastapi가 일반 응답 데이터로 인식함....
-# raise로 변경해야햠....
-# 위 코드도 불안정... return, raise 위치 변경할 것
+        # return todo
+        return ToDoSchema.model_validate(todo)
+    raise HTTPException(status_code=404, detail="ToDO Not Found")
+
     
 
 
