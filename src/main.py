@@ -2,7 +2,7 @@ from fastapi import Depends, FastAPI, Body, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from database.connection import get_db
-from database.repository import get_todo_by_todo_id, get_todos, create_todo
+from database.repository import get_todo_by_todo_id, get_todos, create_todo, update_todo
 
 
 from database.orm import ToDo
@@ -224,20 +224,19 @@ def create_todo_handler(
     return ToDoSchema.model_validate(todo)
 
 
-
-# patch로 기존 todo update하기: 사용자로부터 완료처리(is_done) 입력 받기
-# 앞의 post와 다른점: Request body 전체를 받는 것이 아니라 id와 is_done만 받는다.
 @app.patch("/todos/{todo_id}", status_code=200)
 def update_todo_handler(
     todo_id: int,
-    is_done: bool = Body(..., embed=True) # 하나의 컬럼이지만 바디처럼 묶어서 사용할 수 있음??
+    is_done: bool = Body(..., embed=True),
+    session: Session = Depends(get_db)
     ):
     
-    todo = todo_data.get(todo_id)
-    if todo:
-        todo["is_done"] = is_done
-        return todo # 업데이트 결과를 보여줌
-    #return {} # 없으면 빈 딕셔너리 리턴
+    # todo = todo_data.get(todo_id)
+    todo: ToDo | None = get_todo_by_todo_id(session=session, todo_id=todo_id)
+    if todo: #update
+        todo.done() if is_done else todo.undone()
+        todo: ToDo = update_todo(session=session, todo=todo)
+        return ToDoSchema.model_validate(todo) 
     raise HTTPException(status_code=404, detail="ToDo Not found")
 
 

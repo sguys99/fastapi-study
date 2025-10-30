@@ -325,3 +325,77 @@ def create_todo_handler(
   "is_done": false
 }
 ```
+
+## 35. Update, Patch에 ORM 적용
+
+우선 orm.py로 가서 done, undone 메서드를 추가 정의해주자.
+```python
+class ToDo(Base): # mysql에서 생성한 동일한 테이블 구조
+    __tablename__ = "todo"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    contents = Column(String(256), nullable=False)
+    is_done = Column(Boolean, nullable=False)
+    
+    def __repr__(self): # 내부 정보 출력, 확인위해
+        return f"ToDo(id={self.id}, contents={self.contents}, is_done={self.is_done})"
+    
+    @classmethod
+    def create(cls, request: CreateToDoRequest)-> "ToDo":
+        return cls( # id는 DB에서 별도(자동) 지정되도록 했기 때문에, 두개만 지정하면됨
+            contents=request.contents,
+            is_done=request.is_done
+        )
+        
+    def done(self) -> "ToDo":
+        self.is_done = True
+        return self
+    
+    def undone(self) -> "ToDo":
+        self.is_done = False
+        return self
+```
+
+그리고 repository에 update_todo 함수를 정의하자.
+```python
+# 사실 create_todo와 동일
+def update_todo(session: Session, todo: ToDo) -> ToDo:
+    session.add(instance=todo)
+    session.commit() 
+    session.refresh(instance=todo) 
+    return todo 
+```
+
+이제 main.py의 update_todo_handler를 수정하자.
+```python
+@app.patch("/todos/{todo_id}", status_code=200)
+def update_todo_handler(
+    todo_id: int,
+    is_done: bool = Body(..., embed=True),
+    session: Session = Depends(get_db)
+    ):
+    
+    # todo = todo_data.get(todo_id)
+    todo: ToDo | None = get_todo_by_todo_id(session=session, todo_id=todo_id)
+    if todo: #update
+        todo.done() if is_done else todo.undone()
+        todo: ToDo = update_todo(session=session, todo=todo)
+        return ToDoSchema.model_validate(todo) 
+    raise HTTPException(status_code=404, detail="ToDo Not found")
+```
+
+이제 swagger에서 patch로 todo_id 3번에 다음과 같이 수정해보자.
+```bash
+{
+  "is_done": true
+}
+```
+
+결과는 다음과 같다.
+```bash
+{
+  "id": 3,
+  "contents": "FastAPI Section 2",
+  "is_done": true
+}
+```

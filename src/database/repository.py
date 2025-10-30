@@ -21,3 +21,11 @@ def create_todo(session: Session, todo: ToDo) -> ToDo:
     session.commit() # db에저장
     session.refresh(instance=todo) # 데이터를 다시 읽어주는 부분(db read), 이때 todo_id 값이 반영되서 저장됨
     return todo # id가 포함된 todo를 리턴
+
+
+# 사실 create_todo와 동일
+def update_todo(session: Session, todo: ToDo) -> ToDo:
+    session.add(instance=todo)
+    session.commit() 
+    session.refresh(instance=todo) 
+    return todo 

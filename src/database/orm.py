@@ -21,4 +21,12 @@ class ToDo(Base): # mysql에서 생성한 동일한 테이블 구조
             contents=request.contents,
             is_done=request.is_done
         )
+        
+    def done(self) -> "ToDo":
+        self.is_done = True
+        return self
+    
+    def undone(self) -> "ToDo":
+        self.is_done = False
+        return self
     
