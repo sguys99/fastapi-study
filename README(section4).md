@@ -79,7 +79,7 @@ def test_get_todos():
 ```
 이후 pytest 명령으로 실행
 
-## 42. 
+## 42. Pytest mocking
 
 그런데 위 테스트 코드는 문제가 있다.
 테스트 동안 데이터 베이스 2번 조회함
@@ -89,4 +89,38 @@ def test_get_todos():
 라이브러리 추가 필요
 ```
 uv add pytest-mock
+```
+
+mocking을 사용할때는 함수에 mocker라는 항목 추가하면 됨
+
+```python
+# mocking 반영
+def test_get_todos(mocker):
+    # 정상순서 검증
+    mocker.patch(
+        "main.get_todos", # get_todos_handler 함수 안에서 호출되는 get_todos를 모킹하겠다는 의미
+        return_value= [
+            ToDo(id=1, contents="FastAPI Section 0", is_done = True),
+            ToDo(id=2, contents="FastAPI Section 1", is_done = False),
+        ]) # 실제와 동일하게 리턴 값을 적을 필요가 없다.
+    response = client.get("/todos") 
+    
+    assert response.status_code == 200
+    assert response.json() == {
+        "todos": [
+            {"id": 1, "contents": "FastAPI Section 0", "is_done": True},
+            {"id": 2, "contents": "FastAPI Section 1", "is_done": False},
+        ]
+    }    
+
+    # 역순 검증 order=DESC
+    response = client.get("/todos?order=DESC") 
+    
+    assert response.status_code == 200
+    assert response.json() == {
+        "todos": [
+            {"id": 2, "contents": "FastAPI Section 1", "is_done": False},
+            {"id": 1, "contents": "FastAPI Section 0", "is_done": True},
+        ]
+    }    
 ```
