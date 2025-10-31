@@ -124,3 +124,51 @@ def test_get_todos(mocker):
         ]
     }    
 ```
+
+## 43. pytest fixture
+
+함수안의 객체가 있을 떄 그 데이터나 객체를 쉽게 재사용 하도록 도와줌
+이미 쓰고 있었다.
+mocker...
+
+이번에는 fixture를 만들어 보자...
+
+우리는 앞에서 클라이언트를 만들어서 반복적으로 쓰고 있었다.
+```python
+
+client = TestClient(app=app)
+```
+
+파일마다 객체를 생성하지 않고 미리 픽스처로 등록을 하고 재사용해보자.
+
+tests 패키지 안에 conftest.py를 만들고 정의해주자.
+```python
+
+import pytest
+from fastapi.testclient import TestClient
+from main import app
+
+# fixture는 함수형태로 만들어야함
+@pytest.fixture
+def client():
+    return TestClient(app=app)
+
+```
+위와 같이하면 pytest가 이 함수를 fixture로 인식을 해서 테스트 코드 안에서 글로벌하게 사용할수 있게 된다.
+
+이제 test_main.py에서 client를 지우고 코드를 수정하자.
+
+```python
+#client = TestClient(app=app) # 사용 x
+
+def test_health_check(client):
+    response = client.get("/") #
+    
+    assert response.status_code == 200
+    assert response.json() == {"ping": "pong"}
+
+
+def test_get_todos(client, mocker):
+
+    mocker.patch(...
+```

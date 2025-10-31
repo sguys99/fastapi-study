@@ -4,9 +4,10 @@ from database.orm import ToDo
 from main import app
 
 
-client = TestClient(app=app) # 우리가 만든 app이 테스트 클라이언트가 되서 테스트를 진행하는 방식
 
-def test_health_check():
+#client = TestClient(app=app) # 우리가 만든 app이 테스트 클라이언트가 되서 테스트를 진행하는 방식
+
+def test_health_check(client):
     response = client.get("/") # 이방식으로 앱에 get요청, 결과를 response에 저장
     
     assert response.status_code == 200
@@ -39,7 +40,7 @@ def test_health_check():
 #     }        
 
 # mocking 반영
-def test_get_todos(mocker):
+def test_get_todos(client, mocker):
     # 정상순서 검증
     mocker.patch(
         "main.get_todos", # get_todos_handler 함수 안에서 호출되는 get_todos를 모킹하겠다는 의미
