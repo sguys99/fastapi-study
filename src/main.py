@@ -206,7 +206,7 @@ def get_todo_handler(
     if todo:
         # return todo
         return ToDoSchema.model_validate(todo)
-    raise HTTPException(status_code=404, detail="ToDO Not Found")
+    raise HTTPException(status_code=404, detail="ToDo Not Found")
 
     
 # post 메서드를 사용하여 매핑

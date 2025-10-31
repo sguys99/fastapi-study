@@ -172,3 +172,25 @@ def test_get_todos(client, mocker):
 
     mocker.patch(...
 ```
+
+## 44. GET 단일 조회 API 테스트 코드
+200, 오류 둘다 테스트 하도록 테스트 코드를 작성하자.
+
+```python
+def test_get_todo(client, mocker):
+    mocker.patch(
+        "main.get_todo_by_todo_id", 
+        return_value = ToDo(id=1, contents="todo", is_done=True))
+    
+    response = client.get("/todos/1")
+    assert response.status_code == 200
+    assert response.json() == {"id": 1, "contents": "todo", "is_done": True}
+```
+
+테스트함수 개별로 실행하는 방법도 있다.
+```bash
+pytest tests/test_main.py::함수이름
+
+# 예시
+pytest tests/test_main.py::test_get_todo
+```
