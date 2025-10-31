@@ -50,3 +50,31 @@ pytest
 몇번 실행하다고 꼬이거나 동작안하면 .pytest_cache 파일을 삭제하고 다시 진행한다.
 
 
+## 41. 전체 To Do를 조회하는 get_todos_handler 테스트 코드 추가
+```python
+def test_get_todos():
+    # 정상순서 검증
+    response = client.get("/todos") 
+    
+    assert response.status_code == 200
+    assert response.json() == {
+        "todos": [
+            {"id": 1, "contents": "FastAPI Section 0", "is_done": True},
+            {"id": 2, "contents": "FastAPI Section 1", "is_done": True},
+            {"id": 3, "contents": "FastAPI Section 2", "is_done": True},
+        ]
+    }    
+
+    # 역순 검증 order=DESC
+    response = client.get("/todos?order=DESC") 
+    
+    assert response.status_code == 200
+    assert response.json() == {
+        "todos": [
+            {"id": 3, "contents": "FastAPI Section 2", "is_done": True},
+            {"id": 2, "contents": "FastAPI Section 1", "is_done": True},
+            {"id": 1, "contents": "FastAPI Section 0", "is_done": True},
+        ]
+    }  
+```
+이후 pytest 명령으로 실행
