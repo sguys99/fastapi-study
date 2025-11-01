@@ -204,3 +204,29 @@ pytest tests/test_main.py::함수이름
 # 예시
 pytest tests/test_main.py::test_get_todo
 ```
+
+## 45. POST API 테스트 코드
+
+spy에 대해서 다시 볼걸
+
+```python
+def test_create_todo(client, mocker):
+    create_spy = mocker.spy(ToDo, "create")
+    mocker.patch(
+        "main.create_todo", 
+        return_value = ToDo(id=1, contents="todo", is_done=True))
+    
+    body = {
+        "contents": "test",
+        "is_done": False
+    }
+    
+    response = client.post("/todos", json = body)
+    
+    assert create_spy.spy_return.id is None
+    assert create_spy.spy_return.contents == "test"
+    assert create_spy.spy_return.is_done is False
+    
+    assert response.status_code == 201
+    assert response.json() == {"id": 1, "contents": "todo", "is_done": True}
+```
