@@ -11,7 +11,12 @@ from typing import List
 from schema.request import CreateToDoRequest
 from schema.response import ToDoListSchema, ToDoSchema
 
+from api import todo
+
+
 app = FastAPI()
+app.include_router(todo.router)
+
 
 @app.get("/")
 def health_check_handler():
@@ -176,82 +181,85 @@ todo_data = {
 
 
 
-## ch30 ORM을 적용해보자.
-@app.get("/todos", status_code=200)
-def get_todos_handler(
-    order: str| None = None,
-    session: Session = Depends(get_db)
-    ) -> ToDoListSchema:
-    # result = list(todo_data.values())
+# ## ch30 ORM을 적용해보자.
+# @app.get("/todos", status_code=200)
+# def get_todos_handler(
+#     order: str| None = None,
+#     session: Session = Depends(get_db)
+#     ) -> ToDoListSchema:
+#     # result = list(todo_data.values())
     
-    todos: List[ToDo] = get_todos(session=session)
-    if order and order == "DESC": # DB에서 역정렬 해야지면, 일단 이렇게
-        return ToDoListSchema(
-        todos = [ToDoSchema.model_validate(todo) for todo in todos[::-1]]
-    )
+#     todos: List[ToDo] = get_todos(session=session)
+#     if order and order == "DESC": # DB에서 역정렬 해야지면, 일단 이렇게
+#         return ToDoListSchema(
+#         todos = [ToDoSchema.model_validate(todo) for todo in todos[::-1]]
+#     )
 
-    return ToDoListSchema(
-        todos = [ToDoSchema.model_validate(todo) for todo in todos]
-    )
+#     return ToDoListSchema(
+#         todos = [ToDoSchema.model_validate(todo) for todo in todos]
+#     )
 
 
-# 단일 todo를 조회하는 api
-@app.get("/todos/{todo_id}", status_code=200)
-def get_todo_handler(
-    todo_id: int,
-    session: Session = Depends(get_db)
-    ) -> ToDoSchema:
-    # todo = todo_data.get(todo_id)
-    todo: ToDo | None = get_todo_by_todo_id(session=session, todo_id=todo_id)
-    if todo:
-        # return todo
-        return ToDoSchema.model_validate(todo)
-    raise HTTPException(status_code=404, detail="ToDo Not Found")
+# # 단일 todo를 조회하는 api
+# @app.get("/todos/{todo_id}", status_code=200)
+# def get_todo_handler(
+#     todo_id: int,
+#     session: Session = Depends(get_db)
+#     ) -> ToDoSchema:
+#     # todo = todo_data.get(todo_id)
+#     todo: ToDo | None = get_todo_by_todo_id(session=session, todo_id=todo_id)
+#     if todo:
+#         # return todo
+#         return ToDoSchema.model_validate(todo)
+#     raise HTTPException(status_code=404, detail="ToDo Not Found")
 
     
-# post 메서드를 사용하여 매핑
-# pydantic을 사용하여 request body 생성 가능
+# # post 메서드를 사용하여 매핑
+# # pydantic을 사용하여 request body 생성 가능
 
-@app.post("/todos", status_code=201)
-def create_todo_handler(
-    request: CreateToDoRequest,
-    session: Session = Depends(get_db)
-    ) -> ToDoSchema:
-    #todo_data[request.id] = request.model_dump()
-    todo: ToDo = ToDo.create(request=request) # id = None
-    todo: ToDo = create_todo(session=session, todo=todo) #id=int
-    # return todo_data[request.id]
-    return ToDoSchema.model_validate(todo)
+# @app.post("/todos", status_code=201)
+# def create_todo_handler(
+#     request: CreateToDoRequest,
+#     session: Session = Depends(get_db)
+#     ) -> ToDoSchema:
+#     #todo_data[request.id] = request.model_dump()
+#     todo: ToDo = ToDo.create(request=request) # id = None
+#     todo: ToDo = create_todo(session=session, todo=todo) #id=int
+#     # return todo_data[request.id]
+#     return ToDoSchema.model_validate(todo)
 
 
-@app.patch("/todos/{todo_id}", status_code=200)
-def update_todo_handler(
-    todo_id: int,
-    is_done: bool = Body(..., embed=True),
-    session: Session = Depends(get_db)
-    ):
+# @app.patch("/todos/{todo_id}", status_code=200)
+# def update_todo_handler(
+#     todo_id: int,
+#     is_done: bool = Body(..., embed=True),
+#     session: Session = Depends(get_db)
+#     ):
     
-    # todo = todo_data.get(todo_id)
-    todo: ToDo | None = get_todo_by_todo_id(session=session, todo_id=todo_id)
-    if todo: #update
-        todo.done() if is_done else todo.undone()
-        todo: ToDo = update_todo(session=session, todo=todo)
-        return ToDoSchema.model_validate(todo) 
-    raise HTTPException(status_code=404, detail="ToDo Not Found")
+#     # todo = todo_data.get(todo_id)
+#     todo: ToDo | None = get_todo_by_todo_id(session=session, todo_id=todo_id)
+#     if todo: #update
+#         todo.done() if is_done else todo.undone()
+#         todo: ToDo = update_todo(session=session, todo=todo)
+#         return ToDoSchema.model_validate(todo) 
+#     raise HTTPException(status_code=404, detail="ToDo Not Found")
 
 
-# delete
-@app.delete("/todos/{todo_id}", status_code=204)
-def delete_todo_handler(
-    todo_id: int,
-    session: Session = Depends(get_db)
-    ):
-    todo: ToDo | None = get_todo_by_todo_id(session=session, todo_id=todo_id)
-    if not todo:
-        raise HTTPException(status_code=404, detail="ToDo Not Found")
+# # delete
+# @app.delete("/todos/{todo_id}", status_code=204)
+# def delete_todo_handler(
+#     todo_id: int,
+#     session: Session = Depends(get_db)
+#     ):
+#     todo: ToDo | None = get_todo_by_todo_id(session=session, todo_id=todo_id)
+#     if not todo:
+#         raise HTTPException(status_code=404, detail="ToDo Not Found")
     
-    # delete
-    delete_todo(session=session, todo_id=todo_id)
+#     # delete
+#     delete_todo(session=session, todo_id=todo_id)
+
+# ch 48. 위 코드를 todo.py로 이동
+
 
 
 # 서버 실행 방법
