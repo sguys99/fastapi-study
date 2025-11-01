@@ -110,3 +110,31 @@ def test_create_todo(client, mocker):
     
     assert response.status_code == 201
     assert response.json() == {"id": 1, "contents": "todo", "is_done": True}
+    
+    
+def test_update_todo(client, mocker):
+    # 200
+    mocker.patch(
+        "main.get_todo_by_todo_id", 
+        return_value = ToDo(id=1, contents="todo", is_done=True))
+    
+    undone = mocker.patch.object(ToDo, "undone")
+    
+    mocker.patch(
+        "main.update_todo", 
+        return_value = ToDo(id=1, contents="todo", is_done=False))
+    
+    response = client.patch("/todos/1", json={"is_done": False})
+    
+    undone.assert_called_once_with()
+    assert response.status_code == 200
+    assert response.json() == {"id": 1, "contents": "todo", "is_done": False}
+    
+    # 404
+    mocker.patch(
+        "main.get_todo_by_todo_id", 
+        return_value = None)
+    
+    response = client.patch("/todos/1", json = {"is_done": True})
+    assert response.status_code == 404
+    assert response.json() == {"detail": "ToDo Not Found"}        

@@ -237,7 +237,7 @@ def update_todo_handler(
         todo.done() if is_done else todo.undone()
         todo: ToDo = update_todo(session=session, todo=todo)
         return ToDoSchema.model_validate(todo) 
-    raise HTTPException(status_code=404, detail="ToDo Not found")
+    raise HTTPException(status_code=404, detail="ToDo Not Found")
 
 
 # delete
