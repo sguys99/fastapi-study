@@ -2,7 +2,7 @@ from fastapi import Depends, FastAPI, Body, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from database.connection import get_db
-from database.repository import delete_todo, get_todo_by_todo_id, get_todos, create_todo, update_todo, delete_todo
+#from database.repository import delete_todo, get_todo_by_todo_id, get_todos, create_todo, update_todo, delete_todo
 
 
 from database.orm import ToDo
