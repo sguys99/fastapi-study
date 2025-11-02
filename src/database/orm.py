@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, Integer, String
+from sqlalchemy import Boolean, Column, Integer, String, ForeignKey
 from sqlalchemy.orm import declarative_base
 
 from schema.request import CreateToDoRequest
@@ -11,6 +11,7 @@ class ToDo(Base): # mysql에서 생성한 동일한 테이블 구조
     id = Column(Integer, primary_key=True, index=True)
     contents = Column(String(256), nullable=False)
     is_done = Column(Boolean, nullable=False)
+    user_id = Column(Integer, ForeignKey("user.id")) # 외래 키 추가
     
     def __repr__(self): # 내부 정보 출력, 확인위해
         return f"ToDo(id={self.id}, contents={self.contents}, is_done={self.is_done})"
@@ -30,3 +31,10 @@ class ToDo(Base): # mysql에서 생성한 동일한 테이블 구조
         self.is_done = False
         return self
     
+
+class User(Base):
+    __tablename__ = "user"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(256), nullable=False)
+    password = Column(String(256), nullable=False)
