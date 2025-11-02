@@ -1,5 +1,5 @@
 from sqlalchemy import Boolean, Column, Integer, String, ForeignKey
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import declarative_base, relationship
 
 from schema.request import CreateToDoRequest
 
@@ -38,3 +38,4 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(256), nullable=False)
     password = Column(String(256), nullable=False)
+    todos = relationship("ToDo", lazy="joined") # 컬럼이 생성되는 것이 아니라 쿼리가 실행될 때 조인된 결과를 가져옴

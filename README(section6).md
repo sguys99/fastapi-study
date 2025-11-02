@@ -217,3 +217,21 @@ SELECT * FROM todo t JOIN user u ON t.user_id = u.id;
 +----+-------------------+---------+---------+----+----------+----------+
 3 rows in set (0.00 sec)
 ```
+
+## 55. ORM Join
+앞으로 user를 조회할때 마다 user의 todo도 함께 조회하려고 한다.
+그러기 위해서는 user 클래스에 todo 속성을 연결해야한다.
+
+```python
+class User(Base):
+    __tablename__ = "user"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(256), nullable=False)
+    password = Column(String(256), nullable=False)
+    todos = relationship("ToDo", lazy="joined") # 컬럼이 생성되는 것이 아니라 쿼리가 실행될 때 조인된 결과를 가져옴
+
+```
+
+이렇게 하면 user.todo 같은 명령으로 user의 전체 todo를 조회할수 있게 된다.
+
