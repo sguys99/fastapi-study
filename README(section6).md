@@ -94,3 +94,126 @@ CREATE TABLE user (
 뒤에서 user table 생성을 위해서는 sqlalchemy 함수를 쓸거다.  
 그런데 기존 ToDo 테이블은 user_id 컬럼만 추가할 것이기 때문에 테이블을 생성하지 않고 alter table 명령어를 써서 컬럼을 추가할 거다.
 
+## 53. 테이블 관련 쿼리
+```sql
+CREATE TABLE user (
+    id INTEGER NOT NULL AUTO_INCREMENT, 
+    username VARCHAR(256) NOT NULL, 
+    password VARCHAR(256) NOT NULL, 
+    PRIMARY KEY (id)
+);
+
+ALTER TABLE todo ADD COLUMN user_id INTEGER;
+
+ALTER TABLE todo ADD FOREIGN KEY(user_id) REFERENCES user (id);
+
+INSERT INTO user (username, password) VALUES ("admin", ”password”);
+
+UPDATE todo SET user_id = 1 WHERE id = 1;
+
+SELECT * FROM todo t JOIN user u ON t.user_id = u.id;
+```
+
+## 54. User 테이블 생성
+
+Docker my sql에 접속해서 user 테이블을 생성하자.
+
+컨테이너 bash 실행
+```bash
+docker exec -it todos bash
+```
+
+root 유저로 mysql 실행
+```bash
+mysql -u root -p
+# pw: todos
+```
+
+```sql
+# todos DB로 이동
+use todos;
+
+# 데이터 조회
+select * from todo;
++----+-------------------+---------+
+| id | contents          | is_done |
++----+-------------------+---------+
+|  1 | FastAPI Section 0 |       1 |
+|  2 | FastAPI Section 1 |       1 |
+|  3 | FastAPI Section 2 |       1 |
++----+-------------------+---------+
+3 rows in set (0.00 sec)
+
+# user 테이블 생성
+CREATE TABLE user (
+    id INTEGER NOT NULL AUTO_INCREMENT, 
+    username VARCHAR(256) NOT NULL, 
+    password VARCHAR(256) NOT NULL, 
+    PRIMARY KEY (id)
+);
+
+# 확인
+select * from user;
+
+Empty set (0.00 sec)
+```
+
+todo 테이블 수정, 연결
+```sql
+ALTER TABLE todo ADD COLUMN user_id INTEGER;
+
+# 확인
+select * from todo;
++----+-------------------+---------+---------+
+| id | contents          | is_done | user_id |
++----+-------------------+---------+---------+
+|  1 | FastAPI Section 0 |       1 |    NULL |
+|  2 | FastAPI Section 1 |       1 |    NULL |
+|  3 | FastAPI Section 2 |       1 |    NULL |
++----+-------------------+---------+---------+
+3 rows in set (0.00 sec)
+
+# user_id와 user 테이블의 id 연결
+ALTER TABLE todo ADD FOREIGN KEY(user_id) REFERENCES user (id);
+
+# 실습을 위해 user 테이블에 값 하나 추가(pw는 해시룰 추가해야하나 여기서는 그냥 추가)
+INSERT INTO user (username, password) VALUES ("admin", ”password”);
+
+# 확인
+select * from user;
++----+----------+----------+
+| id | username | password |
++----+----------+----------+
+|  1 | admin    |          |
++----+----------+----------+
+1 row in set (0.00 sec)
+
+# user_id와 id 값이 매핑이 안되어 있다. 그래서 강제 매핑
+UPDATE todo SET user_id = 1 WHERE id = 1;
+UPDATE todo SET user_id = 1 WHERE id = 2;
+UPDATE todo SET user_id = 1 WHERE id = 3;
+
+# 확인
+select * from todo;
++----+-------------------+---------+---------+
+| id | contents          | is_done | user_id |
++----+-------------------+---------+---------+
+|  1 | FastAPI Section 0 |       1 |       1 |
+|  2 | FastAPI Section 1 |       1 |       1 |
+|  3 | FastAPI Section 2 |       1 |       1 |
++----+-------------------+---------+---------+
+3 rows in set (0.00 sec)
+
+# 조인 해보기
+SELECT * FROM todo t JOIN user u ON t.user_id = u.id;
+
+# 확인
++----+-------------------+---------+---------+----+----------+----------+
+| id | contents          | is_done | user_id | id | username | password |
++----+-------------------+---------+---------+----+----------+----------+
+|  1 | FastAPI Section 0 |       1 |       1 |  1 | admin    |          |
+|  2 | FastAPI Section 1 |       1 |       1 |  1 | admin    |          |
+|  3 | FastAPI Section 2 |       1 |       1 |  1 | admin    |          |
++----+-------------------+---------+---------+----+----------+----------+
+3 rows in set (0.00 sec)
+```
