@@ -563,6 +563,56 @@ def user_sign_up_handler(
     
     # 5. return user(id, username) # pw는 알려주면 안되기 때문에
     return UserSchema.model_validate(user)
+```
 
+## 59. 회원가입 api 테스트 
+테스트 코드를 만들어보자. (다시볼것)
 
+```python
+def test_user_sign_up(client, mocker):
+    hash_password = mocker.patch.object(
+        UserService,
+        "hash_password",
+        return_value = "hashed"
+    )
+    user_create = mocker.patch.object(
+        User,
+        "create",
+        return_value = User(id=None, username="test", password="hashed")
+    )
+    
+    mocker.patch.object(
+        UserRepository,
+        "save_user",
+        return_value = User(id=1, username="test", password="hashed")
+    )
+    
+    body = {
+        "username": "test",
+        "password": "plain"
+    }
+
+    response = client.post("/users/sign-up", json=body)
+    
+    hash_password.assert_called_once_with( # hash_password 메서드가 한번 호출되었는지 확인
+        plain_password="plain" 
+    )
+    
+    user_create.assert_called_once_with(
+        username="test",
+        hashed_password="hashed"
+    )
+    assert response.status_code == 201
+    assert response.json() == {"id": 1, "username": "test"}
+```
+
+pytest로 실험해보자.
+
+마지막으로 swagger로도 body를 다음과 같이 입력해서 실험해보자.
+
+```bash
+{
+    "username": "test",
+    "password": "test"
+}
 ```
