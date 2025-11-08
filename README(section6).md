@@ -250,3 +250,115 @@ for todo in todos:
     - 장점: 데이터를 더 효율적으로 가져올 수 있음(N+1 방지)
     - 단점: 꼭 필요하지 않은 데이터까지 JOIN 해서 읽어올 수 있음
 
+## 57 회원 가입 API 생성 및 비번 암호화
+api 폴더에 user.py를 만들자.
+일단 내용은 빼고 함수와 라우터만 정의해둠.
+```python
+# user.py
+from fastapi import APIRouter
+
+router = APIRouter(prefix="/users")
+
+@router.post("/sign-up")
+def user_sign_up_handler():
+    return True
+
+```
+
+그리고 main.py에 와서 라우터 추가
+
+```python
+from api import todo, user
+
+
+app = FastAPI()
+app.include_router(todo.router)
+app.include_router(user.router)
+```
+
+api가 잘 연동되었는지 테스트 코드 작성, 실행
+
+그전에 test_main.py를 리네임해주고 파일도 나눠주자.
+api가 나누어 졌기 때문에 나누어 주는 것이 맞을 듯.
+
+test_main.py, test_todos_api.py, test_users_api.py 세개로 나눈다.
+
+```python
+# test_main.api
+def test_health_check(client):
+    response = client.get("/") # 이방식으로 앱에 get요청, 결과를 response에 저장
+    
+    assert response.status_code == 200
+    assert response.json() == {"ping": "pong"}
+```
+
+```python
+# test_todos_api.api
+from fastapi.testclient import TestClient
+
+from database.orm import ToDo
+from main import app
+from database.repository import ToDoRepository
+
+def test_get_todos(client, mocker):
+    # 정상순서 검증
+    mocker.patch.object(
+        ToDoRepository, 
+        "get_todos",
+
+....
+```
+
+```python
+# test_users_api.py
+
+def test_user_sign_up(client):
+    response = client.post("/users/sign-up")
+    assert response.status_code == 200
+    assert response.json() is True
+```
+위처럼 하고 pytest로 api만 간단하게 우선 테스트 해보자.
+
+이제 실제 테스트 코드를 작성하자.
+
+다음과 같이 만들거다.
+
+```python
+@router.post("/sign-up", status_code=201)
+def user_sign_up_handler():
+    # 1. request body로 username, password 받기
+    # 2. password -> hassing -> hassed_password
+    # 4. user -> db insert
+    # 5. return user(id, username) # pw는 알려주면 안되기 때문에
+    return True
+```
+
+그전에 해싱에 대해서 알아보자.
+비밀번호 암호화를 위해 bcrypt라는 패키지 필요
+```bash
+uv add bcrypt
+```
+
+이제 파이썬 컨솔을 실행해서 테스트 해보자.
+```python
+import bcrypt
+
+password = "password"
+
+# 패스워드 암호와
+
+# 비크립트는 암호와를 위해 패스워드를 byte로 바꿔조야함
+# 여기서는 utf-8로 바이트 인코딩을 해줌
+byte_password = password.encode("UTF-8")
+
+hash_1 = bcrypt.hashpw(byte_password, salt=bcrypt.gensalt())
+hash_2 = bcrypt.hashpw(byte_password, salt=bcrypt.gensalt())
+
+# 일반적인 해시는 항상 동일한 것을 생성.
+# 하지만 솔트를 사용하면 그때그때 달라진다.
+hash_1 == hash_2 # False가 출력됨
+
+# 검증방법
+bcrypt.checkpw(byte_password, hash_1) # True 출력
+bcrypt.checkpw(byte_password, hash_2) # True 출력됨
+```

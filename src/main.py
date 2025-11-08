@@ -11,12 +11,12 @@ from typing import List
 from schema.request import CreateToDoRequest
 from schema.response import ToDoListSchema, ToDoSchema
 
-from api import todo
+from api import todo, user
 
 
 app = FastAPI()
 app.include_router(todo.router)
-
+app.include_router(user.router)
 
 @app.get("/")
 def health_check_handler():
