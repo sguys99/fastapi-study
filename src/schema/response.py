@@ -14,3 +14,11 @@ class ToDoSchema(BaseModel): # orm에 생성한 컬럼과 동일일
 # 이것을 응답에 활용
 class ToDoListSchema(BaseModel):
     todos: List[ToDoSchema]
+    
+    
+class UserSchema(BaseModel):
+    id: int
+    username: str
+    
+    class Config:
+        from_attributes = True

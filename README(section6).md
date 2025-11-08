@@ -362,3 +362,207 @@ hash_1 == hash_2 # False가 출력됨
 bcrypt.checkpw(byte_password, hash_1) # True 출력
 bcrypt.checkpw(byte_password, hash_2) # True 출력됨
 ```
+
+## 58. 회원가입 API 구현
+이제 본격적으로 Sign up api 구현
+
+우선 schema/request.py에다가 signup request body를 정의하자.
+
+```python
+# request.py
+
+class SignUpRequest(BaseModel):
+    username: str
+    password: str
+```
+
+그리고 api에 request body를 추가
+```python
+# user.py
+
+from fastapi import APIRouter
+from schema.request import SignUpRequest
+
+router = APIRouter(prefix="/users")
+
+@router.post("/sign-up", status_code=201)
+def user_sign_up_handler(request: SignUpRequest):
+
+    ....
+```
+
+그런데 hash는 별도의 클래스로 뺄것이다.
+service/user.py를 만들고 여기에 정의하자.
+
+```python
+# user.py
+
+import bcrypt
+
+class UserService:
+    encoding: str = "UTF-8"
+    
+    def hash_password(self, plain_password: str) -> str:
+        hash_password: bytes = bcrypt.hashpw(
+            plain_password.encode(self.encoding), 
+            salt=bcrypt.gensalt(),
+            )
+        return hash_password.decode(self.encoding)
+
+```
+
+그리고 다시 api/user.py로 가서 Depends로 이 클래스를 불러오자.
+그리고 해시 처리하는 코드도 구현
+```python
+@router.post("/sign-up", status_code=201)
+def user_sign_up_handler(
+    request: SignUpRequest,
+    user_service: UserService = Depends(),
+    ):
+    # 1. request body로 username, password 받기
+    # 2. password -> hassing -> hassed_password
+    hashed_password: str = user_service.hash_password(
+        plain_password=request.password
+        )
+        ...
+```
+
+다음으로 User를 만들건데 orm.py에 있는 User 클래스에 class 메서드를 만들고, 이것을 호출해서 사용하자.
+그래서 우선 클래스 메서드를 만들자.
+
+```python
+# orm.py
+
+class User(Base):
+    __tablename__ = "user"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(256), nullable=False)
+    password = Column(String(256), nullable=False)
+    todos = relationship("ToDo", lazy="joined") # 컬럼이 생성되는 것이 아니라 쿼리가 실행될 때 조인된 결과를 가져옴
+
+    @classmethod
+    def create(cls, username: str, hashed_password: str) -> "User":
+        return cls(
+            username=username,
+            password=hashed_password
+        )
+
+```
+
+그리고 다시 돌아가서 구현...
+
+```python
+@router.post("/sign-up", status_code=201)
+def user_sign_up_handler(
+    request: SignUpRequest,
+    user_service: UserService = Depends(),
+    ):
+    # 1. request body로 username, password 받기
+    # 2. password -> hassing -> hassed_password
+    hashed_password: str = user_service.hash_password(
+        plain_password=request.password
+        )
+    
+    # 3. User(usernam, hashed_password)
+    user: User = User.create(
+        username=request.username,
+        hashed_password=hashed_password
+    )
+    
+    # 4. user -> db insert
+    # 5. return user(id, username) # pw는 알려주면 안되기 때문에
+    return True
+```
+
+이제 db 저장 부분을 구현해야하는데, repository.py에 UserRepository 클래스를 구현해서 사용하자.
+
+```python
+# database/repository.py
+
+class UserRepository:
+    def __init__(self, session: Session = Depends(get_db)):
+        self.session = session
+
+    def save_user(self, user: User) -> User:
+        self.session.add(instance=user)
+        self.session.commit()
+        self.session.refresh(instance=user)
+        return user
+
+```
+
+다시 user.py로 와서 저장하는 부분 구현
+
+```python
+@router.post("/sign-up", status_code=201)
+def user_sign_up_handler(
+    request: SignUpRequest,
+    user_service: UserService = Depends(),
+    user_repo: UserRepository = Depends(),
+    ):
+    # 1. request body로 username, password 받기
+    # 2. password -> hassing -> hassed_password
+    hashed_password: str = user_service.hash_password(
+        plain_password=request.password
+        )
+    
+    # 3. User(usernam, hashed_password)
+    user: User = User.create(
+        username=request.username,
+        hashed_password=hashed_password
+    ) # 이시점에는 user의 id가 None이다. orm 객체로만 있는 상태
+    
+    # 4. user -> db insert
+    user: User = user_repo.save_user(user=user) # 이시점에는 user의 id가 int이다. orm 객체가 db에 저장되고 다시 읽어와서 반영된 상태
+    
+    
+    # 5. return user(id, username) # pw는 알려주면 안되기 때문에
+    return True
+```
+
+마지막으로 return 정보를 구현허는데, respone.py에 스키마를 정의해서 사용하자.
+
+```python
+
+class UserSchema(BaseModel):
+    id: int
+    username: str
+    
+    class Config:
+        from_attributes = True
+
+```
+
+이제 리턴 정보까지 구현한 최종 형태.
+
+```python
+# user.py
+
+@router.post("/sign-up", status_code=201)
+def user_sign_up_handler(
+    request: SignUpRequest,
+    user_service: UserService = Depends(),
+    user_repo: UserRepository = Depends(),
+    ):
+    # 1. request body로 username, password 받기
+    # 2. password -> hassing -> hassed_password
+    hashed_password: str = user_service.hash_password(
+        plain_password=request.password
+        )
+    
+    # 3. User(usernam, hashed_password)
+    user: User = User.create(
+        username=request.username,
+        hashed_password=hashed_password
+    ) # 이시점에는 user의 id가 None이다. orm 객체로만 있는 상태
+    
+    # 4. user -> db insert
+    user: User = user_repo.save_user(user=user) # 이시점에는 user의 id가 int이다. orm 객체가 db에 저장되고 다시 읽어와서 반영된 상태
+    
+    
+    # 5. return user(id, username) # pw는 알려주면 안되기 때문에
+    return UserSchema.model_validate(user)
+
+
+```

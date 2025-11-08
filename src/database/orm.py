@@ -39,3 +39,10 @@ class User(Base):
     username = Column(String(256), nullable=False)
     password = Column(String(256), nullable=False)
     todos = relationship("ToDo", lazy="joined") # 컬럼이 생성되는 것이 아니라 쿼리가 실행될 때 조인된 결과를 가져옴
+
+    @classmethod
+    def create(cls, username: str, hashed_password: str) -> "User":
+        return cls(
+            username=username,
+            password=hashed_password
+        )
