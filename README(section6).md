@@ -235,3 +235,18 @@ class User(Base):
 
 이렇게 하면 user.todo 같은 명령으로 user의 전체 todo를 조회할수 있게 된다.
 
+## 56. Lazy Loading/ Eager loading
+- Lazy Loading: 지연 로딩 연관된 객체의 데이터가 실제로 필요한 시점에 조회하는 방법
+    - 장점: 첫 조회 속도가 더 빠름
+    - 단점: N+1 문제 발생
+
+- N+1 Problem: 반복문을 사용할 때는 반복문 횟수만큼 조인이 발생
+```python
+for todo in todos:
+    print(todo.user.username)
+```
+
+- Eager Loading: 즉시 로딩 데이터를 조회할 때 처음부터 연관된 객체를 같이 읽어오는 방법
+    - 장점: 데이터를 더 효율적으로 가져올 수 있음(N+1 방지)
+    - 단점: 꼭 필요하지 않은 데이터까지 JOIN 해서 읽어올 수 있음
+
