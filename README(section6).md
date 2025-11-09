@@ -953,3 +953,163 @@ select * from user;
   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImV4cCI6MTc2Mjc5NDUwNH0.TEFbpJWtk_cNwMjP6H6kbIuXO-IuFnTrOZfuKMKwRIk"
 }
 ```
+
+## 63. JWT 사용
+지금까지 로그인을 통해서 access토큰을 받는 것 까지 구현했다.
+이제 access 토큰을 api에서 검증하는 부분을 구현하겠다.
+이 것을 구현해서 각 핸들러에 검증하는 로직을 추가하면 된다.
+
+
+src 아래에 security.py라는 파일을 만들자.
+```python
+# security.py
+
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import Depends, HTTPException
+
+
+# api에서 dependency로 사용할 수 있는 함수 정의
+
+def get_access_token(
+    auth_header: HTTPAuthorizationCredentials | None = Depends(HTTPBearer(auto_error=False)),
+) -> str:
+    if auth_header is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Not Authorized"
+            )
+    return auth_header.credentials
+
+```
+
+이제 todo.py로 가서 get_todos_hander 함수를 수정해보자.
+
+```python
+@router.get("", status_code=200)
+def get_todos_handler(
+    access_token: str = Depends(get_access_token),
+    order: str| None = None,
+    todo_repo: ToDoRepository = Depends()
+    ) -> ToDoListSchema:
+    
+    print("======================")
+    print(access_token)
+    print("======================")
+    
+    todos: List[ToDo] = todo_repo.get_todos() 
+    if order and order == "DESC": 
+        return ToDoListSchema(
+        todos = [ToDoSchema.model_validate(todo) for todo in todos[::-1]]
+    )
+
+    return ToDoListSchema(
+        todos = [ToDoSchema.model_validate(todo) for todo in todos]
+    )
+```
+
+
+위와 같이 정의하면 api가 호출될때마다, get_access_token 이라는 dependency가 호출이 되서, header에서 bearer 형태로 오는 액세스 토큰이 있나 검증한다. 
+없으면 401 에러를 발생시킨다.
+
+만약에 헤더가 정상적으로 요청이 오면 그 안에있는 크레덴셜(access token)을 리턴한다.???
+
+이제 서버를 실행하고, swagger를 실행해서 테스트 해보자.
+
+swagger 오른쪽 위에 authorize가 항목이 있는 것을 알 수 있다.
+
+먼저 로그인 api를 실행해서 access 토큰을 복사해두자.
+```bash
+{
+  "username": "admin",
+  "password": "password"
+}
+
+# 결과 예시
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImV4cCI6MTc2Mjc5NjMwOX0.dKC1nUPyMYaFLJhw0Lmdrpmqf6AZB2jwAJhbASaCYKc"
+}
+```
+
+이것을 오른쪽 위 httpbearer에 복사 봍여 넣는다.
+이렇게 하면 모든 요청에 헤더를 포함하게 된다.
+
+이제 get todos를 실행해보자.
+요청할 때 인증 bear가 추가된다.
+```bash
+curl -X 'GET' \
+  'http://127.0.0.1:8000/todos' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImV4cCI6MTc2Mjc5NjMwOX0.dKC1nUPyMYaFLJhw0Lmdrpmqf6AZB2jwAJhbASaCYKc'
+```
+
+로그아웃 하고 요청 해보면 401 에러 발생
+
+
+계속해서 유저 서비스에서 access tocken을 검증하고 user name 꺼내오는 기능을 추가해보자.
+
+그러기위해 우선 user.py 서비스에 decode_jwt라는 함수를 정의 하자.
+
+```python
+
+class UserService:
+    encoding: str = "UTF-8"
+    secret_key: str = "secret"
+    jwt_algorithm: str = "HS256"
+    
+    def hash_password(self, plain_password: str) -> str:
+        hash_password: bytes = bcrypt.hashpw(
+            plain_password.encode(self.encoding), 
+            salt=bcrypt.gensalt(),
+            )
+        return hash_password.decode(self.encoding)
+...
+        
+    def decode_jwt(self, access_token: str) -> str:
+        payload: dict = jwt.decode(
+            access_token,
+            self.secret_key,
+            algorithms=[self.jwt_algorithm]
+            )
+        
+        return payload["sub"] # username
+
+```
+
+그리고 get todos 핸들러 수정
+```python
+
+@router.get("", status_code=200)
+def get_todos_handler(
+    access_token: str = Depends(get_access_token),
+    order: str| None = None,
+    user_service: UserService = Depends(),
+    user_repo: UserRepository = Depends(),
+    todo_repo: ToDoRepository = Depends()
+    ) -> ToDoListSchema:
+    
+    # print("======================")
+    # print(access_token)
+    # print("======================")
+    
+    username: str = user_service.decode_jwt(access_token=access_token)
+    
+    # username을 기반으로 유저 정보를 조회
+    user: User | None = user_repo.get_user_by_username(username=username)
+    if not user:
+        raise HTTPException(status_code=404, detail="User Not Found")
+    
+    #todos: List[ToDo] = todo_repo.get_todos() 
+    todos: List[ToDo] = user.todos
+    if order and order == "DESC": 
+        return ToDoListSchema(
+        todos = [ToDoSchema.model_validate(todo) for todo in todos[::-1]]
+    )
+
+    return ToDoListSchema(
+        todos = [ToDoSchema.model_validate(todo) for todo in todos]
+    )
+
+
+```
+
+다시 swagger에서 로그인 후 테스트 해볼것
