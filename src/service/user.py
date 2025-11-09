@@ -23,11 +23,10 @@ class UserService:
 
     def create_jwt(self, username: str) -> str:
         return jwt.encode(
-            payload=
-            { 
+            {
                 "sub": username,
                 "exp": datetime.now() + timedelta(days=1)
             },
-            key=self.secret_key,
+            self.secret_key,
             algorithm=self.jwt_algorithm
             )
