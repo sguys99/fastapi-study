@@ -1169,3 +1169,43 @@ OTP: One-Time Password / 일회용 비밀번호
 
 이후 실습에서 회원가입 이후에 OTP를 통해 이메일을 검증하는 기능을 추가해보자.
 
+redis는 Remote Dictionary Serve의 약자임
+
+## 66. Redis 컨테이너 실행 & Redis 연결
+Redis: 캐싱에 자주 사용되는 키벨류 데이터 스토어, NoSQL
+
+이제 레디스 컨테이너를 추가하자.
+```bash
+# 레디스 컨테이너 죽은것이 있으면 지우고 다시 실행하라는 의미
+# 포트 번호는 레디스 디펄트 포트번호
+
+docker run -p 6379:6379 --name redis -d --rm redis
+
+```
+
+정상 연결 되는지는 파이썬 라이브러리, 컨솔로 테스트 해보자.
+
+```bash
+uv add redis
+```
+
+```python
+import redis
+
+# redis는 바이트 형테로 데이터 저장함
+# 그런데 decode_response True로 설정하면, 바이트가 아니라 파이썬에서 사용하는 데이터 타입으로 변환하여 제공
+
+redis_client = redis.Redis(host="127.0.0.1", port=6379, db=0, encoding = "UTF-8", decode_responses=True)
+
+redis_client.set("key", "value")
+# True
+
+redis_client.get("key")
+# 'value'
+```
+
+redis는 만료기능이 있다.
+특정 시간동안에만 데이터가 유효하도록 하는 기능.
+```python
+redis_client.expire("key", 10) # 10초만 유효하도록
+```
