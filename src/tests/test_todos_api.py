@@ -3,7 +3,9 @@ from fastapi.testclient import TestClient
 from database.orm import ToDo
 from main import app
 from database.repository import ToDoRepository
-
+from service.user import UserService
+from database.orm import User
+from database.repository import UserRepository
 
 #client = TestClient(app=app) # 우리가 만든 app이 테스트 클라이언트가 되서 테스트를 진행하는 방식
     
@@ -156,16 +158,56 @@ from database.repository import ToDoRepository
 
 
 # ch50. Repository Pattern 적용
+# def test_get_todos(client, mocker):
+#     # 정상순서 검증
+#     mocker.patch.object(
+#         ToDoRepository, 
+#         "get_todos",
+#         return_value= [
+#             ToDo(id=1, contents="FastAPI Section 0", is_done = True),
+#             ToDo(id=2, contents="FastAPI Section 1", is_done = False),
+#         ])
+#     response = client.get("/todos") 
+    
+#     assert response.status_code == 200
+#     assert response.json() == {
+#         "todos": [
+#             {"id": 1, "contents": "FastAPI Section 0", "is_done": True},
+#             {"id": 2, "contents": "FastAPI Section 1", "is_done": False},
+#         ]
+#     }    
+
+#     # 역순 검증 order=DESC
+#     response = client.get("/todos?order=DESC") 
+    
+#     assert response.status_code == 200
+#     assert response.json() == {
+#         "todos": [
+#             {"id": 2, "contents": "FastAPI Section 1", "is_done": False},
+#             {"id": 1, "contents": "FastAPI Section 0", "is_done": True},
+#         ]
+#     }    
+    
+
+# ch63. JWT 적용
 def test_get_todos(client, mocker):
-    # 정상순서 검증
+    access_token: str = UserService().create_jwt(username="test")
+    headers = {
+        "Authorization": f"Bearer {access_token}"
+    }
+    
+    user = User(id=1, username="test", password="hashed")
+    user.todos = [
+        ToDo(id=1, contents="FastAPI Section 0", is_done = True),
+        ToDo(id=2, contents="FastAPI Section 1", is_done = False),
+    ]
+    
     mocker.patch.object(
-        ToDoRepository, 
-        "get_todos",
-        return_value= [
-            ToDo(id=1, contents="FastAPI Section 0", is_done = True),
-            ToDo(id=2, contents="FastAPI Section 1", is_done = False),
-        ])
-    response = client.get("/todos") 
+        UserRepository, 
+        "get_user_by_username", 
+        return_value = user)
+
+    response = client.get("/todos", headers=headers)
     
     assert response.status_code == 200
     assert response.json() == {
@@ -176,7 +218,7 @@ def test_get_todos(client, mocker):
     }    
 
     # 역순 검증 order=DESC
-    response = client.get("/todos?order=DESC") 
+    response = client.get("/todos?order=DESC", headers=headers) 
     
     assert response.status_code == 200
     assert response.json() == {
@@ -185,7 +227,6 @@ def test_get_todos(client, mocker):
             {"id": 1, "contents": "FastAPI Section 0", "is_done": True},
         ]
     }    
-    
     
     
 def test_get_todo(client, mocker):
