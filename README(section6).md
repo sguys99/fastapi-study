@@ -903,3 +903,53 @@ def user_log_in_handler(
 
 이렇게 하면 클라이언트는 이 액세스 토큰을 이용해서 로그인을 유지한 상태로 API를 호출할수 있음.(하루 기한)
 
+
+## 62. 로그인 api 테스트
+테스트 코드를 짜지않고, swagger ui에서 테스트 해보자.
+
+그전에 현재 db에 저장된 pw가 해시값이 아니라 password 텍스트가 들어가있는 상태다.
+따라서 콘솔에서 다음 명령으로 hashed 값을 만들어 주자.
+
+```python
+
+import bcrypt
+
+password = "password".encode("UTF-8")
+hashed_password = bcrypt.hashpw(password, salt=bcrypt.gensalt())
+
+hashed_password.decode("UTF-8")
+# 아래가 출력됨
+'$2b$12$rcj/FV.jRS3d7I26I7OwtOXYt9peGPUxFKwKItZgYNo39zZPqwupq'
+```
+
+이제 docker의 mysql에 접속한다.
+```
+docker exec -it todos bash 
+mysql -u root -p
+
+SHOW databases;
+USE todos;
+
+select * from user;
+
+update user set password = '$2b$12$rcj/FV.jRS3d7I26I7OwtOXYt9peGPUxFKwKItZgYNo39zZPqwupq' where id = 1;
+
+select * from user;
+```
+
+이제 swagger로 확인해보자.
+다음 바디를 입력해보자.
+```bash
+{
+  "username": "admin",
+  "password": "password"
+}
+```
+
+결과
+```bash
+# 200
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImV4cCI6MTc2Mjc5NDUwNH0.TEFbpJWtk_cNwMjP6H6kbIuXO-IuFnTrOZfuKMKwRIk"
+}
+```
