@@ -632,3 +632,274 @@ jwt 저장             ->  jwt 반환(access_token)
 api 요청(헤더: jwt)  ->  jwt 검증
 
 
+## 61. 로그인 API 구현
+user.py에 로그인 핸들러를 구현하자.
+
+다음 순서가 될거다.
+```python
+@router.post("/log-in")
+def user_log_in_handler():
+    # 1. request body로 username, password 받기
+    # 2. DB에서 유저 정보 읽어오기
+    # 3. username, password 검증(bcrypt.checkpw)
+    # 3. jwt 생성
+    # 4. jwt 반환
+    return True
+```
+
+우선 schema/request.py에 로그인 request body를 정의한다.
+```python
+class LogInRequest(BaseModel):
+    username: str
+    password: str
+```
+
+그리고 user_log_in_handler 매개변수에 적용
+
+```python
+@router.post("/log-in")
+def user_log_in_handler(
+    request: LogInRequest,
+    ):
+    # 1. request body로 username, password 받기
+    # 2. DB에서 유저 정보 읽어오기
+    # 3. username, password 검증(bcrypt.checkpw)
+    # 3. jwt 생성
+    # 4. jwt 반환
+    return True
+```
+
+그리고 DB에서 사용자 정보를 읽어오기 위해 repository.py의 UserRepository 클래스에 get_user_by_username 메서드를 정의한다.
+```python
+class UserRepository:
+    def __init__(self, session: Session = Depends(get_db)):
+        self.session = session
+        
+    def get_user_by_username(self, username: str) -> User | None:
+        return self.session.scalar(
+            select(User).where(User.username == username)
+            )
+
+    def save_user(self, user: User) -> User:
+        self.session.add(instance=user)
+        self.session.commit()
+        self.session.refresh(instance=user)
+        return user
+```
+
+그리고 다시 user.py 구현
+```python
+
+@router.post("/log-in")
+def user_log_in_handler(
+    request: LogInRequest,
+    user_repo: UserRepository = Depends(),
+    ):
+    # 1. request body로 username, password 받기
+    # 2. DB에서 유저 정보 읽어오기
+    user: User | None = user_repo.get_user_by_username(
+        username=request.username
+        )
+    if not user:
+        raise HTTPException(
+            status_code=404, 
+            detail="User Not Found"
+            )
+    
+    # 3. username, password 검증(bcrypt.checkpw)
+    # 4. jwt 생성
+    # 5. jwt 반환
+    return True
+
+```
+
+3번째 user pw 검증 부분 구현은 service/user.py의 UserService에 메서드로 구현하고 가져다 쓰도록 하자.
+
+```python
+# service/user.py
+
+import bcrypt
+
+class UserService:
+    encoding: str = "UTF-8"
+    
+    def hash_password(self, plain_password: str) -> str:
+        hash_password: bytes = bcrypt.hashpw(
+            plain_password.encode(self.encoding), 
+            salt=bcrypt.gensalt(),
+            )
+        return hash_password.decode(self.encoding)
+    
+    def verify_password(
+        self, plain_password: str, hashed_password: str) -> bool:
+        return bcrypt.checkpw(
+            plain_password.encode(self.encoding),
+            hashed_password.encode(self.encoding),
+            )
+```
+
+이제 이것을 api/user.py에 적용하자.
+```python
+@router.post("/log-in")
+def user_log_in_handler(
+    request: LogInRequest,
+    user_service: UserService = Depends(),
+    user_repo: UserRepository = Depends(),
+    ):
+    # 1. request body로 username, password 받기
+    # 2. DB에서 유저 정보 읽어오기
+    user: User | None = user_repo.get_user_by_username(
+        username=request.username
+        )
+    if not user:
+        raise HTTPException(
+            status_code=404, 
+            detail="User Not Found"
+            )
+    
+    # 3. username, password 검증(bcrypt.checkpw)
+    verified: bool = user_service.verify_password(
+        plain_password=request.password,
+        hashed_password=user.password
+    )
+    if not verified:
+        raise HTTPException(
+            status_code=401,
+            detail="Not Authorized"
+            )
+    
+    # 4. jwt 생성
+    # 5. jwt 반환
+    return True
+
+```
+
+여기까지 오면 user가 pw 입력까지 잘 성공한 상태다.
+로그인을 시켜야한다. jwt 생성 필요...
+이를 위해 패키지를 설지하자.
+```bash
+uv add python-jose
+```
+
+그리고 jwt 관련된 작업은 UserService에 추가하자.
+```python
+
+class UserService:
+    encoding: str = "UTF-8"
+    secret_key: str = "secret"
+    jwt_algorithm: str = "HS256"
+    
+    def hash_password(self, plain_password: str) -> str:
+        hash_password: bytes = bcrypt.hashpw(
+            plain_password.encode(self.encoding), 
+            salt=bcrypt.gensalt(),
+            )
+        return hash_password.decode(self.encoding)
+    
+    def verify_password(
+        self, plain_password: str, hashed_password: str) -> bool:
+        return bcrypt.checkpw(
+            plain_password.encode(self.encoding),
+            hashed_password.encode(self.encoding),
+            )
+
+    def create_jwt(self, username: str) -> str:
+        return jwt.encode(
+            payload=
+            { 
+                "sub": username,
+                "exp": datetime.now() + timedelta(days=1)
+            },
+            key=self.secret_key,
+            algorithm=self.jwt_algorithm
+            )
+```
+
+그러면 계속해서 api에 jwt 생성부분을 구현하자.
+```python
+
+@router.post("/log-in")
+def user_log_in_handler(
+    request: LogInRequest,
+    user_service: UserService = Depends(),
+    user_repo: UserRepository = Depends(),
+    ):
+    # 1. request body로 username, password 받기
+    # 2. DB에서 유저 정보 읽어오기
+    user: User | None = user_repo.get_user_by_username(
+        username=request.username
+        )
+    if not user:
+        raise HTTPException(
+            status_code=404, 
+            detail="User Not Found"
+            )
+    
+    # 3. username, password 검증(bcrypt.checkpw)
+    verified: bool = user_service.verify_password(
+        plain_password=request.password,
+        hashed_password=user.password
+    )
+    if not verified:
+        raise HTTPException(
+            status_code=401,
+            detail="Not Authorized"
+            )
+    
+    # 4. jwt 생성
+    access_token: str = user_service.create_jwt(
+        username=user.username
+    )
+    # 5. jwt 반환
+    return True
+
+```
+
+마지막으로 access_token을 반환하는 부분을 구현하는데, response.py에 정의해서 그것을 사용하자.
+```python
+class JWTResponse(BaseModel):
+    access_token: str
+```
+
+그리고 user.py에 반영. 최종 결과는 다음과 같다.
+```python
+
+@router.post("/log-in")
+def user_log_in_handler(
+    request: LogInRequest,
+    user_service: UserService = Depends(),
+    user_repo: UserRepository = Depends(),
+    ):
+    # 1. request body로 username, password 받기
+    # 2. DB에서 유저 정보 읽어오기
+    user: User | None = user_repo.get_user_by_username(
+        username=request.username
+        )
+    if not user:
+        raise HTTPException(
+            status_code=404, 
+            detail="User Not Found"
+            )
+    
+    # 3. username, password 검증(bcrypt.checkpw)
+    verified: bool = user_service.verify_password(
+        plain_password=request.password,
+        hashed_password=user.password
+    )
+    if not verified:
+        raise HTTPException(
+            status_code=401,
+            detail="Not Authorized"
+            )
+    
+    # 4. jwt 생성
+    access_token: str = user_service.create_jwt(
+        username=user.username
+    )
+    # 5. jwt 반환
+    return JWTResponse(access_token=access_token)
+
+```
+
+이렇게 하면 클라이언트는 이 액세스 토큰을 이용해서 로그인을 유지한 상태로 API를 호출할수 있음.(하루 기한)
+
