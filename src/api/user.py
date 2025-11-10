@@ -9,6 +9,7 @@ from schema.response import JWTResponse
 from schema.request import CreateOTPRequest
 from security import get_access_token
 from cache import redis_client
+from schema.request import VerifyOTPRequest
 
 router = APIRouter(prefix="/users")
 
@@ -95,5 +96,34 @@ def create_otp_handler(
 
 
 @router.post("/email/otp/verify")
-def verify_otp_handler():
-    return True
+def verify_otp_handler(
+    request: VerifyOTPRequest,
+    access_token: str = Depends(get_access_token), # 인증된 사용자 확인
+    user_service: UserService = Depends(),
+    user_repo: UserRepository = Depends(),
+):
+    # 1. access_token 파라미터 받기: 로그인 된 사용자인지 확인
+    # 2. request body로 email, otp 정보 받기
+    otp: str | None = redis_client.get(name=request.email) # redis는 문자열로 저장되므로
+    if not otp:
+        raise HTTPException(
+            status_code=400,
+            detail="Bad Request"
+        )
+    if request.otp != int(otp):
+        raise HTTPException(
+            status_code=400,
+            detail="Bad Request"
+        )
+        
+    # 3. request의 otp와 redis의 otp 비교, 금증
+    username: str = user_service.decode_jwt(access_token=access_token)
+    user: User | None = user_repo.get_user_by_username(username=username)
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User Not Found"
+        )
+        
+    # 4. user(email) 저장: 실제 구현은 안함
+    return UserSchema.model_validate(user)
