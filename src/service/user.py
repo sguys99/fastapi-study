@@ -1,3 +1,4 @@
+import random
 import bcrypt
 from jose import jwt
 from datetime import datetime, timedelta
@@ -39,3 +40,7 @@ class UserService:
             )
         
         return payload["sub"] # username
+    
+    @staticmethod
+    def create_otp() -> int:
+        return random.randint(1000, 9999) # 4자리 랜덤 숫자

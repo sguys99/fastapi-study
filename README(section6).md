@@ -1209,3 +1209,162 @@ redis는 만료기능이 있다.
 ```python
 redis_client.expire("key", 10) # 10초만 유효하도록
 ```
+
+## 67. OTP 생성 API
+회원 가입 API 쪾에 OTP 관련 추가 api생성
+
+우리는 이미 회원가입(username, password) / 로그인 기능을 구현했다.
+
+이제 사용자가 이메일 알림을 받고 싶다고 하면, 
+회원 가입 이후에 -> 이메일을 인증하고(OTP) -> 유저의 이메일을 저장해서 -> 이메일 알림을 받을 수 있도록 하겠다고 하자.
+
+/users/email/otp 를 post로 만들고,
+/users/email/otp/verify도 post로 만들자..
+
+/users/email/otp : redis로 key는 email 정보 , value는 랜덤값?으로 otp 생성
+/users/email/otp/verify: request(email, otp)를 날려서 otp가 일치하면 인증으로 간주 -> user(email) 저장
+
+
+
+이제 user.py에 post를 추가하자.
+```python
+@router.post("/email/otp")
+def create_otp_handler():
+    # 1. access_token 파라미터 받기: 로그인 된 사용자인지 확인
+    # 2. request body로 email 정보 받기
+    # 3. otp 생성 (랜덤 값 4자리)
+    # 4. email, otp를 key, value로 redis에 저장 (3분 만료)
+    # 5. otp를 email로 전송???
+    
+    return True
+
+```
+
+내부를 구현해보자.
+
+```python
+@router.post("/email/otp")
+def create_otp_handler(
+    access_token: str = Depends(get_access_token), # 인증된 사용자 확인
+):
+    # 1. access_token 파라미터 받기: 로그인 된 사용자인지 확인
+    # 2. request body로 email 정보 받기
+    # 3. otp 생성 (랜덤 값 4자리)
+    # 4. email, otp를 key, value로 redis에 저장 (3분 만료)
+    # 5. otp를 email로 전송???
+    
+    return True
+```
+
+request body는 request.py에 정의하고 사용하자.
+```python
+# schema/request.py
+
+class CreateOTPRequest(BaseModel):
+    email: str
+```
+
+```python
+@router.post("/email/otp")
+def create_otp_handler(
+    request: CreateOTPRequest, 
+    access_token: str = Depends(get_access_token), # 인증된 사용자 확인
+):
+    # 1. access_token 파라미터 받기: 로그인 된 사용자인지 확인
+    # 2. request body로 email 정보 받기
+    # 3. otp 생성 (랜덤 값 4자리)
+    # 4. email, otp를 key, value로 redis에 저장 (3분 만료)
+    # 5. otp를 email로 전송???
+    
+    return True
+
+```
+
+이제 user service에 otp 생성하는 부분 작업
+그 전에 service/user.py에 create_otp 함수를 간단하게 만들자.
+
+```python
+    @staticmethod
+    def create_otp() -> int:
+        return random.randint(1000, 9999) # 4자리 랜덤 숫자
+```
+
+
+이것을 api에 반영해서 구현
+```python
+@router.post("/email/otp")
+def create_otp_handler(
+    request: CreateOTPRequest, 
+    access_token: str = Depends(get_access_token), # 인증된 사용자 확인
+    user_service: UserService = Depends(),
+):
+    # 1. access_token 파라미터 받기: 로그인 된 사용자인지 확인
+    # 2. request body로 email 정보 받기
+    # 3. otp 생성 (랜덤 값 4자리)
+    otp: int = user_service.create_otp()
+    
+    # 4. email, otp를 key, value로 redis에 저장 (3분 만료)
+    # 5. otp를 email로 전송???
+    
+    return True
+```
+
+이제 otp를 redis에 저장하는 것을 구현하자.
+그전에 src/cache.py를 만들고 다음을 정의
+
+```python
+import redis
+
+redis_client = redis.Redis(
+    host="127.0.0.1", 
+    port=6379, 
+    db=0, 
+    encoding = "UTF-8", 
+    decode_responses=True
+    )
+```
+
+그다음 redis에 otp 저장하는 부분 구현
+```python
+@router.post("/email/otp")
+def create_otp_handler(
+    request: CreateOTPRequest, 
+    _: str = Depends(get_access_token), # 인증된 사용자 확인, 검증만 하고 사용하지 않으므로로
+    user_service: UserService = Depends(),
+):
+    # 1. access_token 파라미터 받기: 로그인 된 사용자인지 확인
+    # 2. request body로 email 정보 받기
+    # 3. otp 생성 (랜덤 값 4자리)
+    otp: int = user_service.create_otp()
+    
+    # 4. email, otp를 key, value로 redis에 저장 (3분 만료)
+    redis_client.set(name=request.email, value=otp)
+    redis_client.expire(name=request.email, time=3*60) # 3분 만료
+    
+    # 5. otp를 email로 전송???
+    
+    return True
+```
+
+원래는 otp를 email로 전송하는 부분도 구현해야하는데...
+그냥 otp만 리턴 값으로 만들자...
+```python
+@router.post("/email/otp")
+def create_otp_handler(
+    request: CreateOTPRequest, 
+    _: str = Depends(get_access_token), # 인증된 사용자 확인, 검증만 하고 사용하지 않으므로로
+    user_service: UserService = Depends(),
+):
+    # 1. access_token 파라미터 받기: 로그인 된 사용자인지 확인
+    # 2. request body로 email 정보 받기
+    # 3. otp 생성 (랜덤 값 4자리)
+    otp: int = user_service.create_otp()
+    
+    # 4. email, otp를 key, value로 redis에 저장 (3분 만료)
+    redis_client.set(name=request.email, value=otp)
+    redis_client.expire(name=request.email, time=3*60) # 3분 만료
+    
+    # 5. otp를 email로 전송???
+    
+    return {"otp": otp}
+```

@@ -6,6 +6,9 @@ from database.repository import UserRepository
 from schema.response import UserSchema
 from schema.request import LogInRequest
 from schema.response import JWTResponse
+from schema.request import CreateOTPRequest
+from security import get_access_token
+from cache import redis_client
 
 router = APIRouter(prefix="/users")
 
@@ -69,3 +72,28 @@ def user_log_in_handler(
     )
     # 5. jwt 반환
     return JWTResponse(access_token=access_token)
+
+
+@router.post("/email/otp")
+def create_otp_handler(
+    request: CreateOTPRequest, 
+    _: str = Depends(get_access_token), # 인증된 사용자 확인, 검증만 하고 사용하지 않으므로로
+    user_service: UserService = Depends(),
+):
+    # 1. access_token 파라미터 받기: 로그인 된 사용자인지 확인
+    # 2. request body로 email 정보 받기
+    # 3. otp 생성 (랜덤 값 4자리)
+    otp: int = user_service.create_otp()
+    
+    # 4. email, otp를 key, value로 redis에 저장 (3분 만료)
+    redis_client.set(name=request.email, value=otp)
+    redis_client.expire(name=request.email, time=3*60) # 3분 만료
+    
+    # 5. otp를 email로 전송???
+    
+    return {"otp": otp}
+
+
+@router.post("/email/otp/verify")
+def verify_otp_handler():
+    return True
