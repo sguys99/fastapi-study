@@ -1635,3 +1635,9 @@ def verify_otp_handler(
 즉
 서버: Request -> Verify otp -> Response ... 서버는 먼저 응답답
 백그라운드:                              -> Send email(10초) ... 이메일 전송 같이 오래 걸리는 부분은 fastapi에 의해서 알아서 처리
+
+## 71. 컨테이너 정리
+```bash
+docker stop redis
+docker stop todos
+```
