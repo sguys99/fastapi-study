@@ -1,4 +1,5 @@
 import random
+import time
 import bcrypt
 from jose import jwt
 from datetime import datetime, timedelta
@@ -44,3 +45,8 @@ class UserService:
     @staticmethod
     def create_otp() -> int:
         return random.randint(1000, 9999) # 4자리 랜덤 숫자
+    
+    @staticmethod
+    def send_email_to_user(email: str) -> None:
+        time.sleep(10) # 실제 이메일 전송은 아니고 10초 대기
+        print(f"Sending email to {email}!")

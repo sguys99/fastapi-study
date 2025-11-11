@@ -1566,3 +1566,72 @@ authorize에 헤더로 입력
   "username": "admin"
 }
 ```
+
+## 69. Background task
+백그라운드 서비스가 필요한 이유를 설명하기 위해 우선 service/user.py에 서비스를 하나 만들자.
+
+```python
+    @staticmethod
+    def send_email_to_user(email: str) -> None:
+        time.sleep(10) # 실제 이메일 전송은 아니고 10초 대기
+        print(f"Sending email to {email}!")
+```
+
+그리고 이것을 otp api에 추가하자.
+```python
+@router.post("/email/otp/verify")
+def verify_otp_handler(
+    request: VerifyOTPRequest,
+    access_token: str = Depends(get_access_token), # 인증된 사용자 확인
+    user_service: UserService = Depends(),
+    user_repo: UserRepository = Depends(),
+):
+    # 1. access_token 파라미터 받기: 로그인 된 사용자인지 확인
+...
+        
+    # 4. user(email) 저장: 실제 구현은 안함
+    
+    # 5.이메일 전송효과 추가
+    user_service.send_email_to_user(email="admin@fastapi.com")
+    return UserSchema.model_validate(user)
+
+```
+
+이제 다시 스웨거로 가서 otp인증하는 것을 해보자.
+
+send_email_to_user 동작에 10초가 걸리기 때문에 완료 될때까지 loading 대기가 될 것이다.
+따라서 이때는 비동기 식으로 처리하는 것이 좋다.
+이때 background task를 만드는 것이 좋다.
+
+코드를 다음과 같이 실행한다.
+
+```python
+@router.post("/email/otp/verify")
+def verify_otp_handler(
+    request: VerifyOTPRequest,
+    background_tasks: BackgroundTasks,
+    access_token: str = Depends(get_access_token), # 인증된 사용자 확인
+    user_service: UserService = Depends(),
+    user_repo: UserRepository = Depends(),
+):
+    # 1. access_token 파라미터 받기: 로그인 된 사용자인지 확인
+    # 2. request body로 email, otp 정보 받기
+...
+        
+    # 4. user(email) 저장: 실제 구현은 안함
+    
+    # 5.이메일 전송효과 추가
+    background_tasks.add_task(
+        user_service.send_email_to_user, # 함수 이름
+        email="admin@fastapi.com" # 함수 파라미터
+        )
+    # user_service.send_email_to_user(email="admin@fastapi.com")
+    return UserSchema.model_validate(user)
+
+```
+
+이번에는 10초 대기하지 않는다. 10초 지나면 함수 종료됨...
+
+즉
+서버: Request -> Verify otp -> Response ... 서버는 먼저 응답답
+백그라운드:                              -> Send email(10초) ... 이메일 전송 같이 오래 걸리는 부분은 fastapi에 의해서 알아서 처리
